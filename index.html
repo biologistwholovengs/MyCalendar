@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мобильный календарь</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: rgb(128, 128, 128);
+            color: #e0e0e0;
+        }
+
+        #calendar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+             overflow: auto;
+        }
+
+
+        .month-header {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+            width: 100%;
+            color: rgb(96, 96, 96);
+            text-transform: capitalize;
+        }
+
+        .day-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            z-index: 2;
+
+        }
+
+        .day-card {
+            background-color: rgb(96, 96, 96);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin: 8px 0;
+            padding: 16px;
+            flex-grow: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            transition: border 0.2s ease-in-out;
+        }
+
+        .day-card.has-event {
+            border: 2px solid #2196f3;
+        }
+
+        .today {
+            background-color: rgb(160, 160, 160);
+            color: #121212;
+        }
+
+        .sunday {
+            background-color: #d32f2f;
+            color: #ffffff;
+        }
+
+        .saturday {
+            background-color: #ff7043;
+            color: #ffffff;
+        }
+
+        .monday {
+            background-color: rgb(112, 112, 112);
+        }
+
+        .tuesday {
+            background-color: rgb(104, 104, 104);
+        }
+
+        .wednesday {
+            background-color: rgb(96, 96, 96);
+        }
+
+        .thursday {
+            background-color: rgb(88, 88, 88);
+        }
+
+        .friday {
+            background-color: rgb(80, 80, 80);
+        }
+
+        .day-card .left {
+            text-align: left;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .day-card .right {
+            text-align: right;
+        }
+
+        .day-card p {
+            font-size: 14.4px;
+            font-weight: 500;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .day-card .date {
+            font-size: 22.88px;
+            font-weight: 700;
+            margin: 0 5px 0 0;
+            white-space: nowrap;
+        }
+
+        .day-card .month-dayofweek {
+            font-size: 14.4px;
+            font-weight: 500;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+         #day-counter {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: rgb(96, 96, 96);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #scrollToToday {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: rgb(96, 96, 96);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
+        #scrollToToday:hover, #day-counter:hover {
+            background-color: rgb(112, 112, 112);
+        }
+        /* Стили для модального окна */
+        #modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modal-content {
+            background-color: rgb(96, 96, 96);
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 900px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        #modal-content h2 {
+            color: rgb(160, 160, 160);
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        #modal-content .links-header {
+            color: rgb(160, 160, 160);
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        #modal-content .last-edited {
+            color: rgb(160, 160, 160);
+            font-size: 12px;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        #modal-content .note-card-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        #modal-content .todo-item {
+            display: flex;
+            flex-direction: column;
+            background-color: #424242;
+            border-radius: 8px;
+            border: 1px solid #666;
+            padding: 10px;
+            box-sizing: border-box;
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: #e0e0e0;
+            position: relative;
+        }
+        #modal-content .todo-item input[type="checkbox"] {
+            width: 100%; /* Теперь линия на всю ширину */
+            height: 1px;
+            appearance: none;
+            -webkit-appearance: none;
+            border-bottom: 2px solid #e0e0e0; /* Цвет линии */
+            outline: none;
+            cursor: pointer;
+            margin-bottom: 5px;
+            margin-right: 0;
+            margin-left: 0;
+        }
+        #modal-content .todo-item input[type="checkbox"]:checked {
+            border-bottom: 2px solid #2196f3;
+        }
+        #modal-content .todo-item .todo-text {
+            flex-grow: 1;
+            padding: 5px;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+        }
+        #modal-content .todo-item .todo-textarea {
+            width: 100%;
+            height: 100px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            padding: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+            resize: vertical;
+            background-color: #424242;
+            color: #e0e0e0;
+            display: none;
+        }
+        #modal-content .todo-item.editing .todo-text{
+            display: none;
+        }
+        #modal-content .todo-item.editing .todo-textarea {
+            display: block;
+        }
+        #modal-content .todo-item .note-menu {
+            position: absolute;
+            bottom: 0; /* Кнопки снизу */
+            left: 0;
+            width: 100%; /* На всю ширину */
+            height: auto;
+            display: flex;
+            justify-content: flex-end; /*  выравниваем кнопки */
+            background-color: transparent;
+            flex-wrap: wrap;
+        }
+
+        #modal-content .todo-item .note-menu button{
+            background-color: rgb(112, 112, 112);
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            flex: 0;
+            margin: 3px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #modal-content .todo-item .note-menu button:hover {
+            background-color: rgb(128, 128, 128);
+        }
+        #modal-content .todo-item .note-menu button::before {
+            content: '...';
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #modal-content .todo-item .note-menu .inner-menu {
+            display: none;
+            position: absolute;
+            top: -5px;
+            right: 40px; /* Отступ от края основной кнопки */
+            flex-direction: column;
+            background-color: rgb(112, 112, 112);
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            padding: 5px;
+            text-align: center;
+        }
+        #modal-content .todo-item .note-menu .inner-menu button {
+            display: block;
+            background-color: transparent;
+            color: white;
+            border: none;
+            padding: 10px;
+            text-align: center;
+            box-shadow: none;
+            margin: 0;
+            width: 100%;
+        }
+        #modal-content .todo-item .note-menu .inner-menu button:hover {
+            background-color: rgb(128, 128, 128);
+        }
+        #modal-content .todo-item .note-menu .show-inner-menu.active + .inner-menu {
+            display: flex;
+        }
+        #modal-content  textarea {
+            width: calc(100% - 20px);
+            height: 100px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            padding: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+            resize: vertical;
+            background-color: #424242;
+            color: #e0e0e0;
+        }
+        #modal-content .modal-buttons {
+            display: flex;
+            margin-top: 10px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: space-around;
+
+        }
+        #modal-content button {
+            background-color: rgb(112, 112, 112);
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            padding: 10px 15px;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            flex: 1;
+            margin: 3px;
+        }
+        #modal-content button:hover {
+            background-color: rgb(128, 128, 128);
+        }
+        /* Стили для кнопок-стрелок */
+        .arrow-buttons {
+            position: fixed;
+            bottom: 130px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1000;
+        }
+        .arrow-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgb(96, 96, 96);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            font-size: 20px;
+            font-weight: bold;
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .arrow-button:hover {
+            background-color: rgb(112, 112, 112);
+        }
+
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="calendar"></div>
+<div class="arrow-buttons">
+    <button class="arrow-button" id="prevEvent">↑</button>
+    <button class="arrow-button" id="nextEvent">↓</button>
+</div>
+<button id="day-counter">0</button>
+<button id="scrollToToday">Сегодня</button>
+
+
+<div id="modal">
+    <div id="modal-content">
+        <h2 id="modal-date"></h2>
+        <p class="last-edited"></p>
+        <div class="note-card-container">
+            <p class="links-header">Список дел</p>
+            <div class="note-content"></div>
+        </div>
+        <textarea id="modal-textarea"></textarea>
+        <div class="modal-buttons">
+            <button id="modal-save">Сохранить</button>
+            <button id="modal-close">Закрыть</button>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const calendar = document.getElementById('calendar');
+        const todayButton = document.getElementById('scrollToToday');
+        const modal = document.getElementById('modal');
+        const modalDate = document.getElementById('modal-date');
+        const modalLastEdited = document.querySelector('.last-edited');
+        const modalNoteContent = document.querySelector('.note-content');
+        const modalNoteContentContainer = document.querySelector('.note-content-container');
+        const modalTextarea = document.getElementById('modal-textarea');
+        const modalSaveButton = document.getElementById('modal-save');
+        const modalClearButton = document.getElementById('modal-clear');
+        const modalCloseButton = document.getElementById('modal-close');
+        let todayElement = null;
+        const savedEvents = JSON.parse(localStorage.getItem('savedEvents') || '{}');
+        const prevEventButton = document.getElementById('prevEvent');
+        const nextEventButton = document.getElementById('nextEvent');
+        let longPressTimer;
+        const dayCounter = document.getElementById('day-counter');
+        const monthNames = {
+            'янв': 0, 'фев': 1, 'мар': 2, 'апр': 3, 'май': 4, 'июн': 5,
+            'июл': 6, 'авг': 7, 'сен': 8, 'окт': 9, 'ноя': 10, 'дек': 11
+        };
+
+        let selectedDate = null;
+       function createDayCard(date) {
+            const dayContainer = document.createElement('div');
+            dayContainer.classList.add('day-container');
+
+            const dayCard = document.createElement('div');
+            dayCard.classList.add('day-card');
+            const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+            const year = date.getFullYear();
+            const month = date.toLocaleString('ru', { month: 'short' });
+            const day = date.getDate();
+            const dayOfWeek = date.toLocaleString('ru', { weekday: 'long' });
+
+            dayCard.innerHTML = `
+                    <div class="left">
+                         <p class="date">${day}</p>
+                        <p class="month-dayofweek">${month}, ${dayOfWeek}</p>
+                    </div>
+                   <div class="right">
+                       <p>${year}</p>
+                    </div>
+                `;
+
+            if (savedEvents[dateKey] && savedEvents[dateKey].todos && savedEvents[dateKey].todos.length > 0) {
+                dayCard.classList.add('has-event');
+            }
+            dayCard.addEventListener('click', function() {
+                openModal(date, dateKey, dayCard);
+            });
+            dayCard.addEventListener('touchstart', function(event) {
+               longPressTimer = setTimeout(() => {
+                   selectedDate = date;
+                   updateDayCounter(selectedDate)
+                  }, 500);
+            });
+           dayCard.addEventListener('touchend', function() {
+                 clearTimeout(longPressTimer);
+            });
+
+            if (date.toDateString() === new Date().toDateString()) {
+                dayCard.classList.add('today');
+                todayElement = dayContainer;
+            } else if (date.getDay() === 0) {
+                dayCard.classList.add('sunday');
+            } else if (date.getDay() === 6) {
+                dayCard.classList.add('saturday');
+            } else {
+                switch (date.getDay()) {
+                    case 1:
+                        dayCard.classList.add('monday');
+                        break;
+                    case 2:
+                        dayCard.classList.add('tuesday');
+                        break;
+                    case 3:
+                        dayCard.classList.add('wednesday');
+                        break;
+                    case 4:
+                        dayCard.classList.add('thursday');
+                        break;
+                    case 5:
+                        dayCard.classList.add('friday');
+                        break;
+                }
+            }
+    let selectedDate = null;
+    let longPressTimer;
+
+    function updateDayCounter(selectedDate) {
+        if(selectedDate) {
+            const today = new Date();
+            const timeDiff = selectedDate.getTime() - today.getTime();
+            const dayDiff = Math.round(timeDiff / (1000 * 3600 * 24));
+            dayCounter.textContent = dayDiff;
+        }else{
+            dayCounter.textContent = "0";
+        }
+    }
+
+    dayCard.addEventListener('contextmenu', function(event) {
+        event.preventDefault(); // Отменяем стандартное контекстное меню
+        selectedDate = date;
+        updateDayCounter(selectedDate);
+    });
+      dayCard.addEventListener('touchstart', function(event) {
+           longPressTimer = setTimeout(() => {
+               selectedDate = date;
+               updateDayCounter(selectedDate)
+              }, 500);
+        });
+       dayCard.addEventListener('touchend', function() {
+             clearTimeout(longPressTimer);
+        });
+            dayContainer.appendChild(dayCard);
+            return dayContainer;
+        }
+        function addMonthHeader(monthName) {
+            const header = document.createElement('div');
+            header.classList.add('month-header');
+            header.textContent = monthName;
+            calendar.appendChild(header);
+        }
+        function renderCalendar() {
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 365);
+            let lastMonth = null;
+
+            for (let i = 0; i < 730; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                const currentMonth = currentDate.toLocaleString('ru', { month: 'long' });
+                if (currentMonth !== lastMonth) {
+                    addMonthHeader(currentMonth);
+                    lastMonth = currentMonth;
+                }
+                const dayCard = createDayCard(currentDate);
+                calendar.appendChild(dayCard);
+            }
+
+            if (todayElement) {
+                todayElement.scrollIntoView({ behavior: 'auto', block: 'center' });
+            }
+        }
+        function updateDayCounter(selectedDate) {
+                if(selectedDate) {
+                   const today = new Date();
+                   const timeDiff = selectedDate.getTime() - today.getTime();
+                   const dayDiff = Math.round(timeDiff / (1000 * 3600 * 24));
+                   dayCounter.textContent = dayDiff;
+                 }else{
+                    dayCounter.textContent = "0";
+                }
+
+
+        }
+
+        function scrollToToday() {
+            if (todayElement) {
+                todayElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        function createTodoItem(todo, dateKey, index) {
+            const todoItem = document.createElement('div');
+            todoItem.classList.add('todo-item');
+            todoItem.setAttribute('data-todo-id', index);
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+            let todoText = todo.text;
+            let hasLink = false;
+            if (todoText.match(urlRegex)){
+                hasLink = true;
+            }
+            todoItem.innerHTML = `
+                    <input type="checkbox" ${todo.checked ? 'checked' : ''}>
+                   <div class="todo-text" >${todoText}</div>
+                   <textarea class="todo-textarea">${todoText}</textarea>
+                    <div class="note-menu">
+                         <button class="show-inner-menu"></button>
+                         <div class="inner-menu">
+                            ${hasLink ? `<button class="go-to-link">Перейти</button>` : ""}
+                            <button class="edit-todo">Редактировать</button>
+                             <button class="delete-todo">Удалить</button>
+                           <button class="save-todo">Сохранить</button>
+                         </div>
+                   </div>
+                 `;
+            const deleteButton = todoItem.querySelector('.delete-todo');
+            const editButton = todoItem.querySelector('.edit-todo');
+            const goToLinkButton = todoItem.querySelector('.go-to-link');
+            const checkbox = todoItem.querySelector('input[type="checkbox"]');
+            const todoTextElement = todoItem.querySelector('.todo-text');
+            const todoTextareaElement = todoItem.querySelector('.todo-textarea');
+            const menuButton = todoItem.querySelector('.show-inner-menu')
+            let longPressTimer;
+            menuButton.addEventListener('click', function (event){
+                event.stopPropagation();
+                this.classList.toggle('active');
+            });
+            todoItem.addEventListener('touchstart', function(event) {
+                longPressTimer = setTimeout(() => {
+                    this.classList.add('active-menu');
+                    this.focus();
+                }, 500);
+            });
+            todoItem.addEventListener('touchend', function() {
+                clearTimeout(longPressTimer);
+            });
+            checkbox.addEventListener('change', function() {
+                updateTodo(index, this.checked, todoTextareaElement.value, dateKey);
+            });
+            deleteButton.addEventListener('click', function(event){
+                event.stopPropagation();
+                deleteTodo(index, dateKey);
+            });
+            editButton.addEventListener('click', function(event){
+                event.stopPropagation();
+                todoItem.classList.add('editing')
+                todoTextareaElement.focus();
+            });
+            todoTextareaElement.addEventListener('blur', function(event){
+                event.stopPropagation();
+                updateTodo(index, checkbox.checked, this.value, dateKey);
+                todoItem.classList.remove('editing');
+            });
+            if(goToLinkButton){
+                goToLinkButton.addEventListener('click', function(event){
+                    event.stopPropagation();
+                    const urlMatch = todoText.match(urlRegex);
+                    if (urlMatch){
+                        window.open(urlMatch[0], '_blank');
+                    }
+                })
+            }
+
+            const saveButton = todoItem.querySelector('.save-todo');
+            saveButton.addEventListener('click', function(event){
+                event.stopPropagation();
+                updateTodo(index, checkbox.checked, todoTextareaElement.value, dateKey);
+                todoItem.classList.remove('editing');
+            });
+
+
+            return todoItem;
+        }
+
+
+        function updateTodo(index, checked, newText, dateKey) {
+            if (savedEvents[dateKey] && savedEvents[dateKey].todos && savedEvents[dateKey].todos[index]) {
+                savedEvents[dateKey].todos[index].checked = checked;
+                savedEvents[dateKey].todos[index].text = newText;
+                localStorage.setItem('savedEvents', JSON.stringify(savedEvents));
+            }
+        }
+        function deleteTodo(index, dateKey) {
+            if (savedEvents[dateKey] && savedEvents[dateKey].todos ) {
+                savedEvents[dateKey].todos.splice(index, 1);
+                localStorage.setItem('savedEvents', JSON.stringify(savedEvents));
+                renderTodoList(dateKey);
+            }
+        }
+
+        function openModal(date, dateKey, dayCard) {
+            modal.style.display = 'flex';
+            modalDate.textContent = date.toLocaleDateString('ru', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            modalNoteContent.innerHTML = '';
+            modalTextarea.value = '';
+            if (savedEvents[dateKey] && savedEvents[dateKey].lastEdited) {
+                modalLastEdited.textContent = `Последнее редактирование: ${new Date(savedEvents[dateKey].lastEdited).toLocaleString()}`;
+            }else{
+                modalLastEdited.textContent = '';
+            }
+            renderTodoList(dateKey);
+
+            modalSaveButton.onclick = function() {
+                addTodo(dateKey);
+                renderTodoList(dateKey);
+                if (!savedEvents[dateKey]) {
+                    savedEvents[dateKey] = {};
+                }
+                savedEvents[dateKey].lastEdited = Date.now();
+                localStorage.setItem('savedEvents', JSON.stringify(savedEvents));
+                if (savedEvents[dateKey] && savedEvents[dateKey].todos && savedEvents[dateKey].todos.length > 0) {
+                    dayCard.classList.add('has-event');
+                }
+            };
+            modalCloseButton.onclick = function() {
+                modal.style.display = 'none';
+                if(savedEvents[dateKey] && savedEvents[dateKey].todos && savedEvents[dateKey].todos.length > 0){
+                    dayCard.classList.add('has-event');
+                }else{
+                    dayCard.classList.remove('has-event');
+                }
+            };
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                    if(savedEvents[dateKey] && savedEvents[dateKey].todos && savedEvents[dateKey].todos.length > 0){
+                        dayCard.classList.add('has-event');
+                    }else{
+                        dayCard.classList.remove('has-event');
+                    }
+                }
+            }
+        }
+
+        function renderTodoList(dateKey) {
+            modalNoteContent.innerHTML = '';
+            if (!savedEvents[dateKey]) {
+                savedEvents[dateKey] = { todos: [] };
+            }
+            if (!savedEvents[dateKey].todos) {
+                savedEvents[dateKey].todos = [];
+            }
+            savedEvents[dateKey].todos.forEach((todo, index) => {
+                const todoItem = createTodoItem(todo, dateKey, index);
+                modalNoteContent.appendChild(todoItem);
+            });
+        }
+        function addTodo(dateKey) {
+            const newTodoText = modalTextarea.value.trim();
+            if (newTodoText) {
+                if (!savedEvents[dateKey]) {
+                    savedEvents[dateKey] = { todos: [] };
+                }
+                if (!savedEvents[dateKey].todos) {
+                    savedEvents[dateKey].todos = [];
+                }
+                savedEvents[dateKey].todos.push({ text: newTodoText, checked: false });
+                localStorage.setItem('savedEvents', JSON.stringify(savedEvents));
+                modalTextarea.value = '';
+            }
+        }
+        function findPrevEvent() {
+            const cards = document.querySelectorAll('.day-card.has-event');
+            let prevCard = null;
+            let currentCard= null;
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const cardCenter = rect.top + rect.height / 2;
+                const screenCenter = window.innerHeight / 2;
+                const distance = Math.abs(cardCenter - screenCenter);
+
+                if (distance < 1) {
+                    currentCard = card;
+                }
+            });
+
+
+            if(currentCard){
+                let currentIndex = Array.from(cards).indexOf(currentCard);
+                if(currentIndex > 0){
+                    prevCard = cards[currentIndex - 1]
+                }
+
+            }else{
+                prevCard = cards[cards.length -1]
+            }
+            if(prevCard){
+                prevCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        function findNextEvent() {
+            const cards = document.querySelectorAll('.day-card.has-event');
+            let nextCard = null;
+            let currentCard= null;
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                const cardCenter = rect.top + rect.height / 2;
+                const screenCenter = window.innerHeight / 2;
+                const distance = Math.abs(cardCenter - screenCenter);
+
+                if (distance < 1) {
+                    currentCard = card;
+                }
+            });
+            if(currentCard){
+
+                let currentIndex = Array.from(cards).indexOf(currentCard);
+                if(currentIndex < cards.length - 1){
+                    nextCard = cards[currentIndex + 1]
+                }
+            }else{
+                nextCard = cards[0]
+            }
+            if(nextCard){
+                nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+       document.addEventListener('click', function (event) {
+            if (!event.target.closest('.note-menu')) {
+                document.querySelectorAll('.show-inner-menu.active').forEach(menuBtn => {
+                    menuBtn.classList.remove('active');
+                })
+            }
+        });
+
+
+        prevEventButton.addEventListener('click', findPrevEvent);
+        nextEventButton.addEventListener('click', findNextEvent);
+         dayCounter.addEventListener('click', () => {
+              dayCounter.textContent = "0";
+           selectedDate = null;
+        });
+
+        renderCalendar();
+        todayButton.addEventListener('click', scrollToToday);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(registration) {
+                        console.log('Service Worker registered: ', registration);
+                    })
+                    .catch(function(registrationError) {
+                        console.log('Service Worker registration failed: ', registrationError);
+                    });
+            });
+        }
+    });
+</script>
+</body>
+</html>
